@@ -1,12 +1,18 @@
 import argparse
 from cfnplan import Template
 
+
+def describe(arguments):
+    t = Template.parse_file(arguments.stack)
+    t.print_dependencies()
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--dependencies', action='store_true',
-                        help='List dependencies between resources and parameters')
-    parser.add_argument('stack', nargs='?', help='Stack template')
-    values = parser.parse_args()
+    subparsers = parser.add_subparsers(help='Command to run', dest='command')
 
-    t = Template.parse_file(values.stack)
-    t.print_dependencies()
+    describe_parser = subparsers.add_parser('describe', help='Describe the resources and dependencies in a given stack')
+    describe_parser.add_argument('stack', help='Stack template')
+
+    arguments = parser.parse_args()
+    describe(arguments)
+

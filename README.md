@@ -12,7 +12,7 @@ The goal of cfnplan is to:
 Currently cfnplan only lists dependencies for parameters and resources, an example of the AWS "[WordPress scalable and durable](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/sample-templates-applications-ap-southeast-2.html)" template:
 
 ```
-$ python.exe scripts/cfnplan.py -d "tests/templates/WordPress_Multi_AZ.template"
+$ cfnplan describe "tests/templates/WordPress_Multi_AZ.template"
 <== AWS::AccountId
 <== AWS::NotificationARNs
 <== AWS::NoValue
