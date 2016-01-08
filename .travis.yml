@@ -3,5 +3,7 @@ python:
   - "2.7"
   - "3.3"
   - "3.4"
+before_script:
+  - if [[ $TRAVIS_PYTHON_VERSION == 3* ]]; then 2to3 -n -w --no-diffs cfnplan tests; fi
 script:
   - python setup.py test
