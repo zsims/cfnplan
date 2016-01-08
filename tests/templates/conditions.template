@@ -1,0 +1,45 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+  "Description" : "AWS CloudFormation Sample Template WordPress_Multi_AZ: WordPress is web software you can use to create a beautiful website or blog. This template installs a highly-available, scalable WordPress deployment using a multi-az Amazon RDS database instance for storage. It demonstrates using the AWS CloudFormation bootstrap scripts to deploy WordPress. **WARNING** This template creates an Amazon EC2 instance, an Elastic Load Balancer and an Amazon RDS database instance. You will be billed for the AWS resources used if you create a stack from this template.",
+
+  "Conditions" : {
+    "Is-EC2-Classic" : { "Fn::Not" : [{ "Condition" : "Is-EC2-VPC"}]},
+    "Is-EC2-VPC"     : { "Fn::Or" : [ {"Fn::Equals" : [{"Ref" : "AWS::Region"}, "eu-central-1" ]},
+                                      {"Fn::Equals" : [{"Ref" : "AWS::Region"}, "cn-north-1" ]}]},
+    "Reference-Resource" : { "Fn::If" : [{ "Ref" : "ElasticLoadBalancer"}, "y", "n"]}
+  },
+
+  "Resources" : {
+    "ElasticLoadBalancer" : {
+      "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties" : {
+        "AvailabilityZones" : { "Fn::GetAZs" : "" },
+        "CrossZone" : "true",
+        "LBCookieStickinessPolicy" : [ {
+          "PolicyName" : "CookieBasedPolicy",
+          "CookieExpirationPeriod" : "30"
+        } ],
+        "Listeners" : [ {
+          "LoadBalancerPort" : "80",
+          "InstancePort" : "80",
+          "Protocol" : "HTTP",
+          "PolicyNames" : [ "CookieBasedPolicy" ]
+        } ],
+        "HealthCheck" : {
+          "Target" : "HTTP:80/wordpress/wp-admin/install.php",
+          "HealthyThreshold" : "2",
+          "UnhealthyThreshold" : "5",
+          "Interval" : "10",
+          "Timeout" : "5"
+        }
+      }
+    }
+  },
+
+  "Metadata": {
+    "ShouldBeOpaque": {
+        "Condition": "Nup",
+        "Condition": "Is-EC2-VPC"
+    }
+  }
+}

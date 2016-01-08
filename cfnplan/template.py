@@ -7,9 +7,10 @@ class LogicalIdNotFoundError(Exception):
         self.logical_id = logical_id
 
 
-class ResourceNotFoundError(Exception):
-    def __init__(self, logical_id):
+class TypedLogicalIdNotFoundError(Exception):
+    def __init__(self, logical_id, logical_type):
         self.logical_id = logical_id
+        self.logical_type = logical_type
 
 
 class ElementType(Enum):
@@ -24,6 +25,10 @@ class ElementType(Enum):
     property = 5
     parameter = 6
     pseudo_parameter = 7
+    metadata = 8
+    mapping = 9
+    condition = 10
+    output = 11
 
 
 class Element(object):
@@ -37,6 +42,9 @@ class Element(object):
 
     def add_dependency(self, element):
         self.dependencies.append(element)
+
+    def add_child(self, element):
+        self.children.append(element)
 
     def add_children(self, elements):
         self.children.extend(elements)
@@ -88,6 +96,12 @@ class Key(Element):
         self.key = key
 
 
+class Metadata(Element):
+    def __init__(self, key):
+        super(Metadata, self).__init__(ElementType.metadata)
+        self.key = key
+
+
 class Function(Element):
     """
     Represents an intrinsic function per http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference.html
@@ -105,14 +119,17 @@ class LogicalElement(Element):
         super(LogicalElement, self).__init__(element_type)
         self.logical_id = logical_id
 
+    def __str__(self):
+        return '%s' % self.logical_id
+
 
 class Resource(LogicalElement):
     """
     Represents a resource per http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
     """
-    def __init__(self, logical_id, resource_type):
+    def __init__(self, logical_id):
         super(Resource, self).__init__(logical_id, ElementType.resource)
-        self.resource_type = resource_type
+        self.resource_type = None
 
     def __str__(self):
         return '%s (%s)' % (self.logical_id, self.resource_type)
@@ -124,19 +141,29 @@ class Parameter(LogicalElement):
     """
     def __init__(self, logical_id):
         super(Parameter, self).__init__(logical_id, ElementType.parameter)
-        self.logical_id = logical_id
 
-    def __str__(self):
-        return '%s' % self.logical_id
+
+class Condition(LogicalElement):
+    def __init__(self, logical_id):
+        super(Condition, self).__init__(logical_id, ElementType.condition)
 
 
 class PseudoParameter(LogicalElement):
     def __init__(self, logical_id):
         super(PseudoParameter, self).__init__(logical_id, ElementType.pseudo_parameter)
-        self.logical_id = logical_id
 
     def __str__(self):
         return '%s' % self.logical_id
+
+
+class Mapping(LogicalElement):
+    def __init__(self, logical_id):
+        super(Mapping, self).__init__(logical_id, ElementType.mapping)
+
+
+class Output(LogicalElement):
+    def __init__(self, logical_id):
+        super(Output, self).__init__(logical_id, ElementType.output)
 
 
 class Template(object):
@@ -144,25 +171,33 @@ class Template(object):
     Represents an entire template.
     """
     def __init__(self):
+        self.version = None
+        self.description = None
         self.elements = []
+
+        # Logical elements by key, this is a cache for elements
+        self._logical_elements = {}
 
     def get_by_logical_id(self, logical_name):
         """
         Returns the template item associated with the given logical name.
         """
-        # Only resources or parameters
-        matching = [e for e in self.elements if isinstance(e, LogicalElement) and e.logical_id == logical_name]
-        if not matching:
+        if not logical_name in self._logical_elements:
             raise LogicalIdNotFoundError(logical_name)
-        return matching[0]
+        return self._logical_elements[logical_name]
 
-    def get_resource(self, logical_id):
+    def get_by_logical_id_typed(self, logical_id, expected_type):
         logical_item = self.get_by_logical_id(logical_id)
-        if not isinstance(logical_item, Resource):
-            raise ResourceNotFoundError(logical_id)
+        if not isinstance(logical_item, expected_type):
+            raise TypedLogicalIdNotFoundError(logical_id, expected_type)
         return logical_item
 
+    def get_resource(self, logical_id):
+        return self.get_by_logical_id_typed(logical_id, Resource)
+
     def add_element(self, element):
+        if isinstance(element, LogicalElement):
+            self._logical_elements[element.logical_id] = element
         self.elements.append(element)
 
     @staticmethod
@@ -170,15 +205,6 @@ class Template(object):
         parser = TemplateParser()
         parser.parse_file(path)
         return parser.template
-
-    def print_dependencies(self):
-        def log_element(element, level, visited):
-            if not visited:
-                indent = ' ' * (level * 2)
-                print '%s<== %s' % (indent, element)
-
-        for e in self.elements:
-            e.visit_dependencies(log_element)
 
 
 class TemplateParser(object):
@@ -195,11 +221,12 @@ class TemplateParser(object):
             'Fn::GetAZs': self._handle_function,
             'Fn::Join': self._handle_function,
             'Fn::Select': self._handle_function,
+            'Fn::If': self._handle_function_if,
+            'Fn::And': self._handle_function,
+            'Fn::Not': self._handle_function,
+            'Fn::Or': self._handle_function,
+            'Fn::Equals': self._handle_function,
         }
-
-    def _parse_parameters(self, document):
-        for k, v in document['Parameters'].iteritems():
-            self.template.add_element(Parameter(k))
 
     def _add_pseudo_parameters(self):
         parameters = [
@@ -214,10 +241,57 @@ class TemplateParser(object):
             self.template.add_element(PseudoParameter(p))
 
     def parse_file(self, path):
+        """
+        Parses a template from a file per http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html
+        :param path: Full path to the template file to parse
+        """
         d = json.load(open(path))
+
+        # Note that order is important here, as a resource may reference a parameter or condition
+        self._parse_template(d)
         self._add_pseudo_parameters()
-        self._parse_parameters(d)
+
+        # First pass so we have everything in the template, and we can setup dependencies
+        self._pre_create_logical_elements(d, Parameter, 'Parameters')
+        # Note metadata can't be referenced (isn't a logical element)
+        self._pre_create_logical_elements(d, Mapping, 'Mappings')
+        self._pre_create_logical_elements(d, Condition, 'Conditions')
+        self._pre_create_logical_elements(d, Resource, 'Resources')
+        self._pre_create_logical_elements(d, Output, 'Outputs')
+
+        self._parse_top_level_dict(d, Parameter, 'Parameters')
+        self._parse_metadata(d)
+        self._parse_top_level_dict(d, Mapping, 'Mappings')
+        self._parse_top_level_dict(d, Condition, 'Conditions')
         self._parse_resources(d)
+        self._parse_top_level_dict(d, Output, 'Outputs')
+
+    def _parse_template(self, document):
+        self.template.version = document.get('AWSTemplateFormatVersion')
+        self.template.description = document.get('Description')
+
+    def _pre_create_logical_elements(self, document, logical_type, key):
+        if not key in document:
+            return
+
+        elements = {}
+        # First pass to ensure inter-dependencies are satisfiable
+        for k, v in document[key].iteritems():
+            e = logical_type(k)
+            self.template.add_element(e)
+            elements[k] = e
+
+    def _parse_top_level_dict(self, document, internal_type, key):
+        """
+        Parses a top level dictionary, e.g. the "metadata" or properties section into the template with the given internal type
+        """
+        if not key in document:
+            return
+
+        for k, v in document[key].iteritems():
+            e = self.template.get_by_logical_id_typed(k, internal_type)
+            for ek, ev in v.iteritems():
+                e.add_child(self._handle_value(ek, ev))
 
     def _handle_function_ref(self, function, logical_name):
         """
@@ -233,44 +307,65 @@ class TemplateParser(object):
         """
         item = self.template.get_by_logical_id(values[0])
         function.add_dependency(item)
-        function.add_children(self._handle_value(None, values))
+        function.add_child(self._handle_value(None, values))
+
+    def _handle_function_if(self, function, values):
+        """
+        Handle Fn::If functions which references a condition, and other things.
+        See http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-conditions.html#d0e97544
+        """
+        condition = self.template.get_by_logical_id(values[0])
+        function.add_dependency(condition)
+        function.add_child(self._handle_value(None, values))
 
     def _handle_function(self, function, values):
         """
         Handles remaining intrinsic functions
         """
-        function.add_children(self._handle_value(None, values))
+        function.add_child(self._handle_value(None, values))
 
-    def _handle_value(self, key, value):
+    def _handle_value(self, key, value, follow_dependencies=True):
+        """
+        Handles a value of any type, and recurses into the children
+        :param key: The key
+        :param value: The value
+        :param follow_dependencies: Whether or not dependencies should be followed, if false conditions and functions are ignored.
+        :return: The element which key and value represent
+        """
         if isinstance(value, basestring) or isinstance(value, int) or isinstance(bool, int):
-            return [Property(key, value)]
+            p = Property(key, value)
+            # Add a dependency with the condition
+            if follow_dependencies and key == "Condition":
+                p.add_dependency(self.template.get_by_logical_id(value))
+            return p
         elif isinstance(value, list):
             s = Element(ElementType.list)
             i = 0
             for nested_value in value:
-                children = self._handle_value(i, nested_value)
-                s.add_children(children)
+                s.add_child(self._handle_value(i, nested_value, follow_dependencies))
                 i += 1
-            return [s]
+            return s
         elif isinstance(value, dict):
-            d = Key(key)
+            k = Key(key)
             for vk, vv in value.iteritems():
-                if vk in self.known_functions:
+                if follow_dependencies and vk in self.known_functions:
                     f = Function(vk)
                     handler = self.known_functions[vk]
                     handler(f, vv)
-                    d.add_children([f])
+                    k.add_child(f)
                 else:
-                    d.add_children(self._handle_value(vk, vv))
-            return [d]
+                    k.add_child(self._handle_value(vk, vv, follow_dependencies))
+            return k
 
     def _parse_resource(self, resource, raw):
+        resource.resource_type = raw.get('Type')
+
         if not 'Properties' in raw:
             return
 
         for pk, pv in raw.iteritems():
             children = self._handle_value(pk, pv)
-            resource.add_children(children)
+            resource.add_child(children)
 
             # Handle a dependency on another resource
             if pk == 'DependsOn':
@@ -279,11 +374,17 @@ class TemplateParser(object):
 
     def _parse_resources(self, document):
         resources = document['Resources']
-        # resources can depend on each other so create the resources ahead of time
-        for logical_id, raw in resources.iteritems():
-            self.template.add_element(Resource(logical_id, raw['Type']))
 
         for k, v in resources.items():
             r = self.template.get_resource(k)
             self._parse_resource(r, v)
+
+    def _parse_metadata(self, document):
+        metadata = document.get('Metadata')
+
+        if not metadata is None:
+            for k, v in metadata.iteritems():
+                e = Metadata(k)
+                self.template.add_element(e)
+                e.add_child(self._handle_value(None, v, False))
 

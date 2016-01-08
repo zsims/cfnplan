@@ -11,90 +11,86 @@ The goal of cfnplan is to:
  2. Avoid having to apply the "update" vs "replace" rules manually, which you need to [read the docs to learn](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-updating-stacks.html)
 
 ## Example
-Currently cfnplan only lists dependencies for parameters and resources, an example of the AWS "[WordPress scalable and durable](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/sample-templates-applications-ap-southeast-2.html)" template:
+Currently cfnplan only lists dependencies between parameters, mappings, outputs, conditions and resources, an example of the AWS "[WordPress scalable and durable](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/sample-templates-applications-ap-southeast-2.html)" template:
 
 ```
 $ cfnplan describe "tests/templates/WordPress_Multi_AZ.template"
-<== AWS::AccountId
-<== AWS::NotificationARNs
-<== AWS::NoValue
-<== AWS::Region
-<== AWS::StackId
-<== AWS::StackName
-<== DBClass
-<== DBAllocatedStorage
-<== DBName
-<== SSHLocation
-<== KeyName
-<== DBPassword
-<== DBUser
-<== MultiAZDatabase
-<== InstanceType
-<== WebServerCapacity
 <== DBSecurityGroup (AWS::RDS::DBSecurityGroup)
   <== WebServerSecurityGroup (AWS::EC2::SecurityGroup)
     <== SSHLocation
     <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
+  <== Is-EC2-Classic
+    <== Is-EC2-VPC
+      <== AWS::Region
 <== WebServerSecurityGroup (AWS::EC2::SecurityGroup)
   <== SSHLocation
   <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
 <== WebServerGroup (AWS::AutoScaling::AutoScalingGroup)
-  <== WebServerCapacity
   <== LaunchConfig (AWS::AutoScaling::LaunchConfiguration)
+    <== AWS::Region
+    <== AWS::StackId
     <== AWS::StackName
     <== DBName
+    <== KeyName
+    <== DBPassword
+    <== DBUser
+    <== InstanceType
     <== DBInstance (AWS::RDS::DBInstance)
-      <== DBAllocatedStorage
-      <== DBPassword
-      <== DBUser
-      <== MultiAZDatabase
+      <== Is-EC2-VPC
       <== DBSecurityGroup (AWS::RDS::DBSecurityGroup)
         <== WebServerSecurityGroup (AWS::EC2::SecurityGroup)
           <== SSHLocation
           <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
-      <== AWS::NoValue
+        <== Is-EC2-Classic
+      <== DBAllocatedStorage
       <== DBEC2SecurityGroup (AWS::EC2::SecurityGroup)
+      <== MultiAZDatabase
       <== DBClass
-    <== KeyName
-    <== InstanceType
-    <== AWS::Region
-    <== AWS::StackId
+      <== AWS::NoValue
+  <== WebServerCapacity
 <== LaunchConfig (AWS::AutoScaling::LaunchConfiguration)
+  <== AWS::Region
+  <== AWS::StackId
   <== AWS::StackName
   <== DBName
+  <== KeyName
+  <== DBPassword
+  <== DBUser
+  <== InstanceType
   <== DBInstance (AWS::RDS::DBInstance)
-    <== DBAllocatedStorage
-    <== DBPassword
-    <== DBUser
-    <== MultiAZDatabase
+    <== Is-EC2-VPC
     <== DBSecurityGroup (AWS::RDS::DBSecurityGroup)
       <== WebServerSecurityGroup (AWS::EC2::SecurityGroup)
         <== SSHLocation
         <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
-    <== AWS::NoValue
+      <== Is-EC2-Classic
+    <== DBAllocatedStorage
     <== DBEC2SecurityGroup (AWS::EC2::SecurityGroup)
+    <== MultiAZDatabase
     <== DBClass
-  <== KeyName
-  <== InstanceType
-  <== AWS::Region
-  <== AWS::StackId
+    <== AWS::NoValue
 <== DBEC2SecurityGroup (AWS::EC2::SecurityGroup)
+  <== Is-EC2-VPC
+    <== AWS::Region
   <== WebServerSecurityGroup (AWS::EC2::SecurityGroup)
     <== SSHLocation
     <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
 <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
 <== DBInstance (AWS::RDS::DBInstance)
-  <== DBAllocatedStorage
-  <== DBName
-  <== DBPassword
-  <== DBUser
-  <== MultiAZDatabase
+  <== Is-EC2-VPC
+    <== AWS::Region
   <== DBSecurityGroup (AWS::RDS::DBSecurityGroup)
     <== WebServerSecurityGroup (AWS::EC2::SecurityGroup)
       <== SSHLocation
       <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
-  <== AWS::NoValue
+    <== Is-EC2-Classic
+  <== DBAllocatedStorage
+  <== DBName
   <== DBEC2SecurityGroup (AWS::EC2::SecurityGroup)
+  <== DBPassword
+  <== DBUser
+  <== MultiAZDatabase
   <== DBClass
+  <== AWS::NoValue
 ```
 

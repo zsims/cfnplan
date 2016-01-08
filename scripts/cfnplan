@@ -1,10 +1,22 @@
 import argparse
-from cfnplan import Template
+from cfnplan import Template, ElementType
 
 
-def describe(arguments):
-    t = Template.parse_file(arguments.stack)
-    t.print_dependencies()
+def describe(args):
+    t = Template.parse_file(args.stack)
+
+    def print_dependencies():
+        def log_element(element, level, visited):
+            if not visited:
+                indent = ' ' * (level * 2)
+                print '%s<== %s' % (indent, element)
+
+        for e in t.elements:
+            if args.show_all or e.element_type == ElementType.resource:
+                e.visit_dependencies(log_element)
+
+    print_dependencies()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -12,6 +24,7 @@ if __name__ == '__main__':
 
     describe_parser = subparsers.add_parser('describe', help='Describe the resources and dependencies in a given stack')
     describe_parser.add_argument('stack', help='Stack template')
+    describe_parser.add_argument('--all', dest='show_all', action='store_true', help='Show everything, not just resources')
 
     arguments = parser.parse_args()
     describe(arguments)
