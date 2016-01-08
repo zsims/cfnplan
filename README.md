@@ -2,6 +2,8 @@
 cfnplan (CloudFormation Plan) is a simple tool to help you plan for AWS CloudFormation stack updates. It's inspired
 by the (awesome) [terraform](https://terraform.io/) plan mode.
 
+[![Build Status](https://travis-ci.org/zsims/cfnplan.svg?branch=master)](https://travis-ci.org/zsims/cfnplan)
+
 ## Goal
 The goal of cfnplan is to:
 
