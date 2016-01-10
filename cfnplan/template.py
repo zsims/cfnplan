@@ -49,7 +49,18 @@ class Element(object):
     def add_children(self, elements):
         self.children.extend(elements)
 
-    def all_dependencies(self):
+    def get_all_children(self):
+        visited = []
+
+        def visit(item):
+            visited.append(item)
+            for c in item.children:
+                visit(c)
+
+        visit(self)
+        return visited
+
+    def get_all_dependencies(self):
         """
         Returns a list of all the dependencies, including those children have.
         """
@@ -71,7 +82,7 @@ class Element(object):
             is_visited = item in visited
             visited.add(item)
             callback(item, level, is_visited)
-            for d in item.all_dependencies():
+            for d in item.get_all_dependencies():
                 visit(level + 1, d)
 
         visit(0, self)
@@ -178,13 +189,13 @@ class Template(object):
         # Logical elements by key, this is a cache for elements
         self._logical_elements = {}
 
-    def get_by_logical_id(self, logical_name):
+    def get_by_logical_id(self, logical_id):
         """
-        Returns the template item associated with the given logical name.
+        Returns the template item associated with the given logical id.
         """
-        if not logical_name in self._logical_elements:
-            raise LogicalIdNotFoundError(logical_name)
-        return self._logical_elements[logical_name]
+        if logical_id not in self._logical_elements:
+            raise LogicalIdNotFoundError(logical_id)
+        return self._logical_elements[logical_id]
 
     def get_by_logical_id_typed(self, logical_id, expected_type):
         logical_item = self.get_by_logical_id(logical_id)
@@ -206,6 +217,12 @@ class Template(object):
         parser.parse_file(path)
         return parser.template
 
+    @staticmethod
+    def parse_string(raw_string):
+        parser = TemplateParser()
+        parser.parse_string(raw_string)
+        return parser.template
+
 
 class TemplateParser(object):
     """
@@ -217,8 +234,8 @@ class TemplateParser(object):
             'Ref': self._handle_function_ref,
             'Fn::GetAtt': self._handle_function_get_att,
             'Fn::Base64': self._handle_function,
-            'Fn::FindInMap': self._handle_function,
-            'Fn::GetAZs': self._handle_function,
+            'Fn::FindInMap': self._handle_function_find_in_map,
+            'Fn::GetAZs': self._handle_function_get_azs,
             'Fn::Join': self._handle_function,
             'Fn::Select': self._handle_function,
             'Fn::If': self._handle_function_if,
@@ -240,31 +257,42 @@ class TemplateParser(object):
         for p in parameters:
             self.template.add_element(PseudoParameter(p))
 
+    def parse_string(self, raw_string):
+        """
+        Parses a template from a string per http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html
+        :param raw_string: String representing the whole template
+        """
+        d = json.loads(raw_string)
+        self._parse_json(d)
+
     def parse_file(self, path):
         """
         Parses a template from a file per http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-anatomy.html
         :param path: Full path to the template file to parse
         """
         d = json.load(open(path))
+        self._parse_json(d)
+
+    def _parse_json(self, document):
 
         # Note that order is important here, as a resource may reference a parameter or condition
-        self._parse_template(d)
+        self._parse_template(document)
         self._add_pseudo_parameters()
 
         # First pass so we have everything in the template, and we can setup dependencies
-        self._pre_create_logical_elements(d, Parameter, 'Parameters')
+        self._pre_create_logical_elements(document, Parameter, 'Parameters')
         # Note metadata can't be referenced (isn't a logical element)
-        self._pre_create_logical_elements(d, Mapping, 'Mappings')
-        self._pre_create_logical_elements(d, Condition, 'Conditions')
-        self._pre_create_logical_elements(d, Resource, 'Resources')
-        self._pre_create_logical_elements(d, Output, 'Outputs')
+        self._pre_create_logical_elements(document, Mapping, 'Mappings')
+        self._pre_create_logical_elements(document, Condition, 'Conditions')
+        self._pre_create_logical_elements(document, Resource, 'Resources')
+        self._pre_create_logical_elements(document, Output, 'Outputs')
 
-        self._parse_top_level_dict(d, Parameter, 'Parameters')
-        self._parse_metadata(d)
-        self._parse_top_level_dict(d, Mapping, 'Mappings')
-        self._parse_top_level_dict(d, Condition, 'Conditions')
-        self._parse_resources(d)
-        self._parse_top_level_dict(d, Output, 'Outputs')
+        self._parse_top_level_dict(document, Parameter, 'Parameters')
+        self._parse_metadata(document)
+        self._parse_top_level_dict(document, Mapping, 'Mappings')
+        self._parse_top_level_dict(document, Condition, 'Conditions')
+        self._parse_resources(document)
+        self._parse_top_level_dict(document, Output, 'Outputs')
 
     def _parse_template(self, document):
         self.template.version = document.get('AWSTemplateFormatVersion')
@@ -307,6 +335,24 @@ class TemplateParser(object):
         """
         item = self.template.get_by_logical_id(values[0])
         function.add_dependency(item)
+        function.add_child(self._handle_value(None, values))
+
+    def _handle_function_find_in_map(self, function, values):
+        """
+        Handle FindInMap functions which can reference mappings
+        """
+        mapping = self.template.get_by_logical_id(values[0])
+        function.add_dependency(mapping)
+        function.add_child(self._handle_value(None, values))
+
+    def _handle_function_get_azs(self, function, values):
+        """
+        Handle GetAZs functions which can reference a region
+        """
+        # Supports AWS::Region or a user-entered region
+        if isinstance(values, basestring) and values == "AWS::Region":
+            parameter = self.template.get_by_logical_id("AWS::Region")
+            function.add_dependency(parameter)
         function.add_child(self._handle_value(None, values))
 
     def _handle_function_if(self, function, values):
