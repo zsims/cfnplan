@@ -35,6 +35,32 @@ class TemplateParserTestCase(unittest.TestCase):
         self.assertEqual(1, len(dependencies))
         self.assertEqual('Instance', list(dependencies)[0].logical_id)
 
+    def test_resource_depends_on(self):
+        # Arrange
+        raw = '''
+            {
+                "Resources": {
+                    "Instance": {
+                        "Type" : "AWS::EC2::Instance",
+                        "DependsOn": "OtherInstance"
+                    },
+
+                    "OtherInstance": {
+                        "Type" : "AWS::EC2::Instance"
+                    }
+                }
+            }
+        '''
+
+        # Act
+        t = Template.parse_string(raw)
+
+        # Assert
+        eip = t.get_resource("Instance")
+        dependencies = eip.get_all_dependencies()
+        self.assertEqual(1, len(dependencies))
+        self.assertEqual('OtherInstance', list(dependencies)[0].logical_id)
+
     def test_parameters(self):
         # Arrange
         raw = r'''
