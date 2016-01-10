@@ -406,9 +406,6 @@ class TemplateParser(object):
     def _parse_resource(self, resource, raw):
         resource.resource_type = raw.get('Type')
 
-        if not 'Properties' in raw:
-            return
-
         for pk, pv in raw.iteritems():
             children = self._handle_value(pk, pv)
             resource.add_child(children)
