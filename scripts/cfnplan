@@ -7,9 +7,8 @@ def describe(args):
 
     def print_dependencies():
         def log_element(element, level, visited):
-            if not visited:
-                indent = ' ' * (level * 2)
-                print '%s<== %s' % (indent, element)
+            indent = ' ' * (level * 2)
+            print '%s<== %s' % (indent, element)
 
         for e in t.elements:
             if args.show_all or e.element_type == ElementType.resource:

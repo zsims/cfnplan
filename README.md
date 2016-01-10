@@ -37,16 +37,34 @@ $ cfnplan describe "tests/templates/WordPress_Multi_AZ.template"
     <== InstanceType
     <== DBInstance (AWS::RDS::DBInstance)
       <== Is-EC2-VPC
+        <== AWS::Region
       <== DBSecurityGroup (AWS::RDS::DBSecurityGroup)
         <== WebServerSecurityGroup (AWS::EC2::SecurityGroup)
           <== SSHLocation
           <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
         <== Is-EC2-Classic
+          <== Is-EC2-VPC
+            <== AWS::Region
       <== DBAllocatedStorage
+      <== DBName
       <== DBEC2SecurityGroup (AWS::EC2::SecurityGroup)
+        <== Is-EC2-VPC
+          <== AWS::Region
+        <== WebServerSecurityGroup (AWS::EC2::SecurityGroup)
+          <== SSHLocation
+          <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
+      <== DBPassword
+      <== DBUser
       <== MultiAZDatabase
       <== DBClass
+      <== Is-EC2-Classic
+        <== Is-EC2-VPC
+          <== AWS::Region
       <== AWS::NoValue
+    <== WebServerSecurityGroup (AWS::EC2::SecurityGroup)
+      <== SSHLocation
+      <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
+  <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
   <== WebServerCapacity
 <== LaunchConfig (AWS::AutoScaling::LaunchConfiguration)
   <== AWS::Region
@@ -59,16 +77,33 @@ $ cfnplan describe "tests/templates/WordPress_Multi_AZ.template"
   <== InstanceType
   <== DBInstance (AWS::RDS::DBInstance)
     <== Is-EC2-VPC
+      <== AWS::Region
     <== DBSecurityGroup (AWS::RDS::DBSecurityGroup)
       <== WebServerSecurityGroup (AWS::EC2::SecurityGroup)
         <== SSHLocation
         <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
       <== Is-EC2-Classic
+        <== Is-EC2-VPC
+          <== AWS::Region
     <== DBAllocatedStorage
+    <== DBName
     <== DBEC2SecurityGroup (AWS::EC2::SecurityGroup)
+      <== Is-EC2-VPC
+        <== AWS::Region
+      <== WebServerSecurityGroup (AWS::EC2::SecurityGroup)
+        <== SSHLocation
+        <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
+    <== DBPassword
+    <== DBUser
     <== MultiAZDatabase
     <== DBClass
+    <== Is-EC2-Classic
+      <== Is-EC2-VPC
+        <== AWS::Region
     <== AWS::NoValue
+  <== WebServerSecurityGroup (AWS::EC2::SecurityGroup)
+    <== SSHLocation
+    <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
 <== DBEC2SecurityGroup (AWS::EC2::SecurityGroup)
   <== Is-EC2-VPC
     <== AWS::Region
@@ -84,13 +119,23 @@ $ cfnplan describe "tests/templates/WordPress_Multi_AZ.template"
       <== SSHLocation
       <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
     <== Is-EC2-Classic
+      <== Is-EC2-VPC
+        <== AWS::Region
   <== DBAllocatedStorage
   <== DBName
   <== DBEC2SecurityGroup (AWS::EC2::SecurityGroup)
+    <== Is-EC2-VPC
+      <== AWS::Region
+    <== WebServerSecurityGroup (AWS::EC2::SecurityGroup)
+      <== SSHLocation
+      <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
   <== DBPassword
   <== DBUser
   <== MultiAZDatabase
   <== DBClass
+  <== Is-EC2-Classic
+    <== Is-EC2-VPC
+      <== AWS::Region
   <== AWS::NoValue
 ```
 
