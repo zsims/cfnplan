@@ -46,6 +46,15 @@ class TemplateParserTestCase(unittest.TestCase):
                     },
 
                     "OtherInstance": {
+                        "Type" : "AWS::EC2::Instance",
+                        "DependsOn": ["OtherInstance2", "OtherInstance3"]
+                    },
+
+                    "OtherInstance2": {
+                        "Type" : "AWS::EC2::Instance"
+                    },
+
+                    "OtherInstance3": {
                         "Type" : "AWS::EC2::Instance"
                     }
                 }
@@ -58,8 +67,10 @@ class TemplateParserTestCase(unittest.TestCase):
         # Assert
         eip = t.get_resource("Instance")
         dependencies = eip.get_all_dependencies()
-        self.assertEqual(1, len(dependencies))
-        self.assertEqual('OtherInstance', list(dependencies)[0].logical_id)
+        self.assertEqual(3, len(dependencies))
+        next(d for d in dependencies if d.logical_id == 'OtherInstance')
+        next(d for d in dependencies if d.logical_id == 'OtherInstance2')
+        next(d for d in dependencies if d.logical_id == 'OtherInstance3')
 
     def test_parameters(self):
         # Arrange
@@ -148,8 +159,8 @@ class TemplateParserTestCase(unittest.TestCase):
         is_ec2_classic = t.get_by_logical_id('Is-EC2-Classic')
         self.assertEqual(ElementType.condition, is_ec2_classic.element_type)
         dependencies = is_ec2_classic.get_all_dependencies()
-        self.assertEqual(1, len(dependencies))
-        self.assertEqual('Is-EC2-VPC', list(dependencies)[0].logical_id)
+        self.assertEqual(2, len(dependencies))
+        self.assertTrue(any(d for d in dependencies if d.logical_id == 'Is-EC2-VPC'))
 
     def test_resource_dependency_tree(self):
         # Arrange
@@ -161,8 +172,7 @@ class TemplateParserTestCase(unittest.TestCase):
         }
         expected_resources = {
             'SharePointFoundationSecurityGroup',
-            'SharePointFoundationWaitHandle',
-            'SharePointFoundation'
+            'SharePointFoundationWaitHandle'
         }
 
         # Act
@@ -192,13 +202,16 @@ class TemplateParserTestCase(unittest.TestCase):
             'DBUser',
             'DBPassword',
             'DBClass',
-            'DBAllocatedStorage'
+            'DBAllocatedStorage',
+            'SSHLocation'
         }
 
         # These resources resolve through an "If"
         expected_resources = {
             'DBEC2SecurityGroup',
-            'DBSecurityGroup'
+            'DBSecurityGroup',
+            'ElasticLoadBalancer',
+            'WebServerSecurityGroup'
         }
 
         # Act
@@ -311,8 +324,8 @@ class TemplateParserTestCase(unittest.TestCase):
         function = next(c for c in instance.get_all_children() if c.element_type == ElementType.function)
         dependencies = list(function.get_all_dependencies())
         self.assertEqual("Fn::GetAtt", function.name)
-        self.assertEqual(1, len(dependencies))
-        self.assertEqual("EIP", dependencies[0].logical_id)
+        self.assertEqual(2, len(dependencies))
+        self.assertTrue(any(d for d in dependencies if d.logical_id == 'EIP'))
         self.assertEqual(ElementType.resource, dependencies[0].element_type)
 
     def test_function_fn_get_azs(self):
@@ -386,8 +399,8 @@ class TemplateParserTestCase(unittest.TestCase):
         instance = t.get_resource("Instance")
         join_function = next(c for c in instance.get_all_children() if c.element_type == ElementType.function and c.name == 'Fn::Join')
         dependencies = list(join_function.get_all_dependencies())
-        self.assertEqual(1, len(dependencies))
-        self.assertEqual("EIP", dependencies[0].logical_id)
+        self.assertEqual(2, len(dependencies))
+        self.assertTrue(any(d for d in dependencies if d.logical_id == 'EIP'))
         self.assertEqual(ElementType.resource, dependencies[0].element_type)
         self.assertEqual(1, len(join_function.children))
         grand_children = join_function.children[0]
