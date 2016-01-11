@@ -7,11 +7,16 @@ def describe(args):
 
     def print_dependencies():
         def log_element(element, level, visited):
-            indent = ' ' * (level * 2)
-            print '%s<== %s' % (indent, element)
+            if args.show_verbose:
+                indent = ' ' * (level * 2)
+                print '%s<== %s' % (indent, element)
+            else:
+                if not visited:
+                    print '  <== %s' % element
 
         for e in t.elements:
-            if args.show_all or e.element_type == ElementType.resource:
+            if e.element_type == ElementType.resource:
+                print '%s' % e
                 e.visit_dependencies(log_element)
 
     print_dependencies()
@@ -23,7 +28,7 @@ if __name__ == '__main__':
 
     describe_parser = subparsers.add_parser('describe', help='Describe the resources and dependencies in a given stack')
     describe_parser.add_argument('stack', help='Stack template')
-    describe_parser.add_argument('--all', dest='show_all', action='store_true', help='Show everything, not just resources')
+    describe_parser.add_argument('-v', '--verbose', dest='show_verbose', action='store_true', help='Show the full dependency tree')
 
     arguments = parser.parse_args()
     describe(arguments)

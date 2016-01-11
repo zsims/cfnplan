@@ -66,22 +66,29 @@ class Element(object):
         """
         visited = set()
 
-        def visit(level, item):
+        def visit(item):
             for d in item.dependencies:
-                visited.add(d)
+                if d not in visited:
+                    visited.add(d)
+                    visit(d)
             for c in item.children:
-                visit(level + 1, c)
+                visit(c)
 
-        visit(0, self)
+        visit(self)
         return visited
 
     def visit_dependencies(self, callback):
+        """
+        Visit all the dependencies the element has.
+        :param callback: Function to call back for every element
+        """
         visited = set()
 
         def visit(level, item):
             is_visited = item in visited
             visited.add(item)
-            callback(item, level, is_visited)
+            if item is not self:
+                callback(item, level, is_visited)
             for d in item.get_all_dependencies():
                 visit(level + 1, d)
 
@@ -313,7 +320,7 @@ class TemplateParser(object):
         """
         Parses a top level dictionary, e.g. the "metadata" or properties section into the template with the given internal type
         """
-        if not key in document:
+        if key not in document:
             return
 
         for k, v in document[key].iteritems():
@@ -410,10 +417,13 @@ class TemplateParser(object):
             children = self._handle_value(pk, pv)
             resource.add_child(children)
 
-            # Handle a dependency on another resource
+            # Handle a dependency on another resource, or several resources
             if pk == 'DependsOn':
-                r = self.template.get_resource(pv)
-                resource.add_dependency(r)
+                if not isinstance(pv, list):
+                    pv = [pv]
+                for d in pv:
+                    r = self.template.get_resource(d)
+                    resource.add_dependency(r)
 
     def _parse_resources(self, document):
         resources = document['Resources']

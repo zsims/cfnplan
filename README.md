@@ -15,127 +15,40 @@ Currently cfnplan only lists dependencies between parameters, mappings, outputs,
 
 ```
 $ cfnplan describe "tests/templates/WordPress_Multi_AZ.template"
-<== DBSecurityGroup (AWS::RDS::DBSecurityGroup)
-  <== WebServerSecurityGroup (AWS::EC2::SecurityGroup)
-    <== SSHLocation
-    <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
-  <== Is-EC2-Classic
-    <== Is-EC2-VPC
-      <== AWS::Region
-<== WebServerSecurityGroup (AWS::EC2::SecurityGroup)
+DBSecurityGroup (AWS::RDS::DBSecurityGroup)
+  <== AWS::Region
   <== SSHLocation
   <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
-<== WebServerGroup (AWS::AutoScaling::AutoScalingGroup)
-  <== LaunchConfig (AWS::AutoScaling::LaunchConfiguration)
-    <== AWS::Region
-    <== AWS::StackId
-    <== AWS::StackName
-    <== DBName
-    <== KeyName
-    <== DBPassword
-    <== DBUser
-    <== InstanceType
-    <== DBInstance (AWS::RDS::DBInstance)
-      <== Is-EC2-VPC
-        <== AWS::Region
-      <== DBSecurityGroup (AWS::RDS::DBSecurityGroup)
-        <== WebServerSecurityGroup (AWS::EC2::SecurityGroup)
-          <== SSHLocation
-          <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
-        <== Is-EC2-Classic
-          <== Is-EC2-VPC
-            <== AWS::Region
-      <== DBAllocatedStorage
-      <== DBName
-      <== DBEC2SecurityGroup (AWS::EC2::SecurityGroup)
-        <== Is-EC2-VPC
-          <== AWS::Region
-        <== WebServerSecurityGroup (AWS::EC2::SecurityGroup)
-          <== SSHLocation
-          <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
-      <== DBPassword
-      <== DBUser
-      <== MultiAZDatabase
-      <== DBClass
-      <== Is-EC2-Classic
-        <== Is-EC2-VPC
-          <== AWS::Region
-      <== AWS::NoValue
-    <== WebServerSecurityGroup (AWS::EC2::SecurityGroup)
-      <== SSHLocation
-      <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
+  <== Is-EC2-Classic
+  <== Is-EC2-VPC
+  <== WebServerSecurityGroup (AWS::EC2::SecurityGroup)
+WebServerSecurityGroup (AWS::EC2::SecurityGroup)
+  <== SSHLocation
   <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
-  <== WebServerCapacity
-<== LaunchConfig (AWS::AutoScaling::LaunchConfiguration)
-  <== AWS::Region
-  <== AWS::StackId
-  <== AWS::StackName
-  <== DBName
-  <== KeyName
-  <== DBPassword
-  <== DBUser
-  <== InstanceType
-  <== DBInstance (AWS::RDS::DBInstance)
-    <== Is-EC2-VPC
-      <== AWS::Region
-    <== DBSecurityGroup (AWS::RDS::DBSecurityGroup)
-      <== WebServerSecurityGroup (AWS::EC2::SecurityGroup)
-        <== SSHLocation
-        <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
-      <== Is-EC2-Classic
-        <== Is-EC2-VPC
-          <== AWS::Region
-    <== DBAllocatedStorage
-    <== DBName
-    <== DBEC2SecurityGroup (AWS::EC2::SecurityGroup)
-      <== Is-EC2-VPC
-        <== AWS::Region
-      <== WebServerSecurityGroup (AWS::EC2::SecurityGroup)
-        <== SSHLocation
-        <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
-    <== DBPassword
-    <== DBUser
-    <== MultiAZDatabase
-    <== DBClass
-    <== Is-EC2-Classic
-      <== Is-EC2-VPC
-        <== AWS::Region
-    <== AWS::NoValue
+
+# ... snip ...
+```
+
+Or with the full dependency tree:
+```
+$ cfnplan describe "tests/templates/WordPress_Multi_AZ.template" --verbose
+DBSecurityGroup (AWS::RDS::DBSecurityGroup)
   <== WebServerSecurityGroup (AWS::EC2::SecurityGroup)
-    <== SSHLocation
     <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
-<== DBEC2SecurityGroup (AWS::EC2::SecurityGroup)
+    <== SSHLocation
+  <== SSHLocation
+  <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
   <== Is-EC2-VPC
     <== AWS::Region
-  <== WebServerSecurityGroup (AWS::EC2::SecurityGroup)
-    <== SSHLocation
-    <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
-<== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
-<== DBInstance (AWS::RDS::DBInstance)
-  <== Is-EC2-VPC
-    <== AWS::Region
-  <== DBSecurityGroup (AWS::RDS::DBSecurityGroup)
-    <== WebServerSecurityGroup (AWS::EC2::SecurityGroup)
-      <== SSHLocation
-      <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
-    <== Is-EC2-Classic
-      <== Is-EC2-VPC
-        <== AWS::Region
-  <== DBAllocatedStorage
-  <== DBName
-  <== DBEC2SecurityGroup (AWS::EC2::SecurityGroup)
-    <== Is-EC2-VPC
-      <== AWS::Region
-    <== WebServerSecurityGroup (AWS::EC2::SecurityGroup)
-      <== SSHLocation
-      <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
-  <== DBPassword
-  <== DBUser
-  <== MultiAZDatabase
-  <== DBClass
   <== Is-EC2-Classic
     <== Is-EC2-VPC
       <== AWS::Region
-  <== AWS::NoValue
+    <== AWS::Region
+  <== AWS::Region
+WebServerSecurityGroup (AWS::EC2::SecurityGroup)
+  <== ElasticLoadBalancer (AWS::ElasticLoadBalancing::LoadBalancer)
+  <== SSHLocation
+
+# ... snip ...
 ```
 
