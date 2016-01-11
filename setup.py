@@ -1,9 +1,6 @@
 from setuptools import setup
 import os
 
-with open(os.path.join(os.path.dirname(__file__), 'README.md')) as readme:
-    long_description = readme.read()
-
 from cfnplan import __version__
 
 setup(
@@ -17,7 +14,6 @@ setup(
     url='https://github.com/zsims/cfnplan',
     license='LICENSE.txt',
     description='Simple tool to help you plan for AWS CloudFormation stack updates',
-    long_description=long_description,
     install_requires=[],
     classifiers=[
         'Development Status :: 4 - Beta',
