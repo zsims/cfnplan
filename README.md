@@ -3,6 +3,7 @@ cfnplan (CloudFormation Plan) is a simple tool to help you plan for AWS CloudFor
 by the (awesome) [terraform](https://terraform.io/) plan mode.
 
 [![Build Status](https://travis-ci.org/zsims/cfnplan.svg?branch=master)](https://travis-ci.org/zsims/cfnplan)
+[![PyPI version](https://badge.fury.io/py/cfnplan.svg)](https://badge.fury.io/py/cfnplan)
 
 ## Goal
 The goal of cfnplan is to:
@@ -10,7 +11,13 @@ The goal of cfnplan is to:
  1. Avoid having to read your CloudFormation template to work out resource dependencies
  2. Avoid having to apply the "update" vs "replace" rules manually, which you need to [read the docs to learn](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-updating-stacks.html)
 
-## Example
+# Install
+cfnplan is available via PyPi:
+```
+$ pip install cfnplan
+```
+
+# Example
 Currently cfnplan only lists dependencies between parameters, mappings, outputs, conditions and resources, an example of the AWS "[WordPress scalable and durable](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/sample-templates-applications-ap-southeast-2.html)" template:
 
 ```
