@@ -306,7 +306,7 @@ class TemplateParser(object):
         self.template.description = document.get('Description')
 
     def _pre_create_logical_elements(self, document, logical_type, key):
-        if not key in document:
+        if key not in document:
             return
 
         elements = {}
@@ -435,7 +435,7 @@ class TemplateParser(object):
     def _parse_metadata(self, document):
         metadata = document.get('Metadata')
 
-        if not metadata is None:
+        if metadata is not None:
             for k, v in metadata.iteritems():
                 e = Metadata(k)
                 self.template.add_element(e)
